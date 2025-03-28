@@ -43,7 +43,7 @@ particle_color = "rgba(65, 137, 255, 0.6)"  # Particle color
 particle_blur = "1px"  # Blur effect on particles
 
 # Control Panel Position Configuration
-control_panel_right = 300  # Distance from right edge in pixels
+control_panel_right = 80  # Distance from right edge in pixels
 control_panel_bottom = 200  # Distance from bottom edge in pixels
 
 # Add a loading state
@@ -100,6 +100,9 @@ iframe_code = f"""
         background: transparent;
         position: relative;
         overflow: hidden;
+        transform: scale(0.75); /* Default zoom to 75% */
+        transform-origin: top center; /* Scale from top center */
+        transition: transform 0.3s ease; /* Smooth transition for scaling */
     }}
     
     .nav-tab-container {{
@@ -296,12 +299,12 @@ iframe_code = f"""
         right: 0;
         bottom: 0;
         background: transparent;
-        border: 5px solid rgba(65, 137, 255, 0.7); /* Matching nav glow */
+        border: 5px solid rgba(65, 137, 255, 0.7);
         border-radius: 0 0 5px 5px;
         box-shadow: 
-            0 0 35px 8px rgba(65, 137, 255, 0.5), /* Matching nav glow */
-            inset 0 0 18px rgba(65, 137, 255, 0.4); /* Matching nav glow */
-        animation: breathe 8s infinite ease-in-out; /* Matching nav glow */
+            0 0 35px 8px rgba(65, 137, 255, 0.5),
+            inset 0 0 18px rgba(65, 137, 255, 0.4);
+        animation: breathe 8s infinite ease-in-out;
         z-index: 0;
     }}
     
@@ -431,19 +434,19 @@ iframe_code = f"""
     }}
 
     @media (max-width: 1400px) {{
-        .dashboard-container {{ transform: scale(0.9); transform-origin: top center; }}
+        .dashboard-container {{ transform: scale(0.75); transform-origin: top center; }}
     }}
 
     @media (max-width: 1200px) {{
-        .dashboard-container {{ transform: scale(0.8); transform-origin: top center; }}
+        .dashboard-container {{ transform: scale(0.65); transform-origin: top center; }}
     }}
 
     @media (max-width: 992px) {{
-        .dashboard-container {{ transform: scale(0.7); transform-origin: top center; }}
+        .dashboard-container {{ transform: scale(0.55); transform-origin: top center; }}
     }}
 
     @media (max-width: 768px) {{
-        .dashboard-container {{ transform: scale(0.6); transform-origin: top center; }}
+        .dashboard-container {{ transform: scale(0.45); transform-origin: top center; }}
     }}
 
     .error-message {{
@@ -502,7 +505,7 @@ iframe_code = f"""
     }}
 </style>
 
-<div class="dashboard-container">
+<div class="dashboard-container" id="dashboardContainer">
     <div class="nav-tab-container">
         <div class="nav-edge-lighting">
             <div class="nav-glow-effect"></div>
@@ -592,19 +595,48 @@ iframe_code = f"""
     }}
     
     function toggleFullscreen() {{
+        const dashboard = document.getElementById('dashboardContainer');
         const iframe = document.getElementById('powerBiFrame');
+        
         if (!document.fullscreenElement) {{
-            if (iframe.requestFullscreen) {{ iframe.requestFullscreen(); }}
-            else if (iframe.mozRequestFullScreen) {{ iframe.mozRequestFullScreen(); }}
-            else if (iframe.webkitRequestFullscreen) {{ iframe.webkitRequestFullscreen(); }}
-            else if (iframe.msRequestFullscreen) {{ iframe.msRequestFullscreen(); }}
+            // Enter fullscreen
+            if (dashboard.requestFullscreen) {{ dashboard.requestFullscreen(); }}
+            else if (dashboard.mozRequestFullScreen) {{ dashboard.mozRequestFullScreen(); }}
+            else if (dashboard.webkitRequestFullscreen) {{ dashboard.webkitRequestFullscreen(); }}
+            else if (dashboard.msRequestFullscreen) {{ dashboard.msRequestFullscreen(); }}
+            
+            // Calculate scale to fit screen while maintaining aspect ratio
+            const screenWidth = window.screen.width;
+            const screenHeight = window.screen.height;
+            const dashboardWidth = {total_width};
+            const dashboardHeight = {total_height};
+            const scaleX = screenWidth / dashboardWidth;
+            const scaleY = screenHeight / dashboardHeight;
+            const scale = Math.min(scaleX, scaleY); // Fit within screen while preserving aspect ratio
+            
+            dashboard.style.transform = 'scale(' + scale + ')';
+            dashboard.style.transformOrigin = 'top center';
         }} else {{
+            // Exit fullscreen
             if (document.exitFullscreen) {{ document.exitFullscreen(); }}
             else if (document.mozCancelFullScreen) {{ document.mozCancelFullScreen(); }}
             else if (document.webkitExitFullscreen) {{ document.webkitExitFullscreen(); }}
             else if (document.msExitFullscreen) {{ document.msExitFullscreen(); }}
+            
+            // Revert to default 75% zoom
+            dashboard.style.transform = 'scale(0.75)';
+            dashboard.style.transformOrigin = 'top center';
         }}
     }}
+    
+    // Ensure scale resets on fullscreen change
+    document.addEventListener('fullscreenchange', function() {{
+        const dashboard = document.getElementById('dashboardContainer');
+        if (!document.fullscreenElement) {{
+            dashboard.style.transform = 'scale(0.75)';
+            dashboard.style.transformOrigin = 'top center';
+        }}
+    }});
     
     window.addEventListener('error', function(e) {{
         if (e.target.tagName === 'IFRAME') {{

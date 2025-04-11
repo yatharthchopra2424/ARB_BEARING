@@ -1,651 +1,509 @@
 import streamlit as st
 from streamlit.components.v1 import html
 import time
+import base64
+from pathlib import Path
+import random  # Needed for particle positioning
 
-# Page configuration
+# --- Helper function to encode image to Base64 ---
+def img_to_base64(img_path):
+    """Converts an image file to a Base64 encoded string."""
+    path = Path(img_path)
+    if not path.is_file():
+        st.error(f"Error: Image file not found at {img_path}")
+        return None
+    with open(path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+# --- Configuration ---
 st.set_page_config(
-    page_title="ARB BEARING - Power BI Report Viewer",
+    page_title="EASTERN BEARING - Dashboard",
     layout="wide",
     initial_sidebar_state="collapsed",
     menu_items=None
 )
 
-# Fixed dimensions based on the provided values
-width = 1300
-height = 750
-total_width = 1400
-total_height = 1000  # Adjusted for nav-tab (44px), padding-top (20px), and margin-top (-5px)
+# --- Image Encoding ---
+image_file_name = "input_file_0.png"  # Make sure this file is accessible
+b64_image = img_to_base64(image_file_name)
 
-# Top Navigation Bar (nav-tab) Configuration Variables
-nav_width = 1300  # Width of the navigation bar in pixels
-nav_height = 44   # Height of the navigation bar in pixels
-nav_background_color = "rgba(0, 32, 84, 0.92)"  # Dark blue with transparency
-nav_glow_color = "rgba(65, 137, 255, 0.7)"     # Blue glow effect color
-nav_shadow = "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)"  # Box shadow
-nav_padding = "8px 16px"  # Padding inside the nav bar
-nav_border_radius = "4px 4px 0 0"  # Rounded corners (top only)
-nav_blur = "8px"  # Backdrop blur effect
+# --- Dimensions and Styling Variables ---
+pbi_width = 1300
+pbi_height = 750
+nav_height = 75
 
-# Logo Configuration
-logo_height = 26  # Height of the logo in pixels
-logo_margin_right = 12  # Margin between logo and title in pixels
+content_width = pbi_width
+content_height = nav_height + pbi_height
 
-# Title Configuration
-title_font_size = 16  # Font size of the title in pixels
-title_font_weight = 500  # Font weight of the title
-title_color = "white"  # Text color of the title
-title_text_shadow = "0 0 10px rgba(65, 137, 255, 0.8)"  # Text shadow effect
+nav_bg_color = "#ffffff"
+pbi_shadow = "0 4px 12px rgba(0, 0, 0, 0.1)"
+nav_border_radius = "6px 6px 0 0"
+pbi_border_radius = "5 5 6px 6px"  # For effects layer and container
 
-# Scatter Particle Configuration
-particle_count_nav = 5  # Number of scatter particles in nav
-particle_size = 4  # Size of particles in pixels
-particle_color = "rgba(65, 137, 255, 0.6)"  # Particle color
-particle_blur = "1px"  # Blur effect on particles
+# --- Effects Configuration ---
+particle_count_pbi = 12  # Number of particles
+particle_size = 3
+particle_color = "rgba(0, 123, 255, 0.7)"  # Increased opacity for more visibility
+particle_blur = "1px"
+pbi_glow_color = "rgba(0, 123, 255, 0.6)"  # Slightly stronger glow color
 
-# Control Panel Position Configuration
-control_panel_right = 80  # Distance from right edge in pixels
-control_panel_bottom = 200  # Distance from bottom edge in pixels
+# --- Control Panel Position ---
+control_panel_right = 20
+control_panel_bottom = 20
+
+# --- Watermark Configuration ---
+watermark_text = "EASTERN BEARING"
+watermark_color = "rgba(0, 86, 179, 0.15)"  # Noticeable blue
+watermark_font_size = "8vw"
+watermark_rotation = "-30deg"
+watermark_opacity = 2.0  # Control visibility mainly via alpha
+
+# --- Fallback if image fails ---
+if not b64_image:
+    nav_image_html = (
+        '<div style="color: #dc3545; text-align: center; '
+        'padding: 20px; font-weight: 500; background-color: #f8d7da; '
+        'border-radius: 6px 6px 0 0; height: 100%; display: flex; '
+        'align-items: center; justify-content: center;">Error: Header image not found.</div>'
+    )
+else:
+    # Slide the image to left using margin-left: 20px
+    nav_image_html = (
+        f'<img src="data:image/png;base64,{b64_image}" alt="ARB Eastern Bearing Header Banner" '
+        f'style="display: block; width: 100%; height: 100%; object-fit: contain; '
+        f'border-radius: {nav_border_radius}; margin-right: 450px;">'
+    )
+
+# --- Particle Positioning along Boundaries ---
+def generate_particle_positions(count):
+    css_list = []
+    for i in range(count):
+        # Choose a random boundary: 0-top, 1-bottom, 2-left, 3-right
+        edge = random.choice([0, 1, 2, 3])
+        if edge == 0:  # top edge, small random offset from top
+            top = random.uniform(0, 10)
+            left = random.uniform(0, 100)
+        elif edge == 1:  # bottom edge
+            top = random.uniform(90, 100)
+            left = random.uniform(0, 100)
+        elif edge == 2:  # left edge
+            top = random.uniform(0, 100)
+            left = random.uniform(0, 10)
+        else:  # right edge
+            top = random.uniform(0, 100)
+            left = random.uniform(90, 100)
+        animation_delay = random.uniform(0, 7)
+        css_list.append(
+            f".pbi-scatter-particle:nth-child({i+1}) {{ top: {top:.2f}%; left: {left:.2f}%; animation-delay: {animation_delay:.2f}s; }}"
+        )
+    return " ".join(css_list)
+
+particle_css = generate_particle_positions(particle_count_pbi)
 
 # Add a loading state
-with st.spinner("Loading ARB Bearing Dashboard..."):
-    time.sleep(0.5)
+with st.spinner("Loading Dashboard Interface..."):
+    time.sleep(0.2)
 
-# Generate iframe HTML with updated styling
+# Generate iframe HTML with updated title and particle settings, with edge lightning removed and title moved to left 40px.
 iframe_code = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eastern Bearing Dashboard</title>
 <style>
     /* Reset and base styles */
-    * {{
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    html {{ font-size: 16px; }}
+    body {{
+        width: 100%;
+        min-height: 100vh;
+        padding: 30px 10px;
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background-color: #f0f2f5;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
     }}
-    
-    html, body {{
-        width: {total_width}px;
-        height: {total_height}px;
-        margin: 0 auto;
-        font-family: 'Segoe UI', Arial, sans-serif;
-        background: transparent;
-        overflow: hidden;
+
+    /* Watermark Style */
+    body::before {{
+        content: '{watermark_text}';
+        position: fixed; top: 50%; left: 50%;
+        transform: translate(-50%, -50%) rotate({watermark_rotation});
+        font-size: {watermark_font_size}; font-weight: 700;
+        color: {watermark_color};
+        white-space: nowrap; z-index: 0;
+        pointer-events: none; user-select: none;
+        opacity: {watermark_opacity};
     }}
 
     /* Hide Streamlit elements */
-    #MainMenu {{visibility: hidden;}}
-    header {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    .block-container {{
-        padding: 0 !important;
-        max-width: 100% !important;
-        margin-top: 0 !important;
+    #MainMenu, header, footer, .css-1d391kg {{ visibility: hidden; height: 0; overflow: hidden; }}
+    .block-container {{ padding: 0 !important; margin: 0 !important; max-width: none !important; }}
+    .stApp {{ background: transparent !important; }}
+
+    /* Wrapper for the fixed-width dashboard */
+    .dashboard-wrapper {{
+        width: {content_width}px;
+        margin: 0 auto;
+        position: relative;
+        background-color: #ffffff;
+        border-radius: 6px;
+        box-shadow: {pbi_shadow};
+        overflow: hidden;
     }}
-    
-    .css-1d391kg {{
-        visibility: hidden;
-        width: 0;
+
+    /* Dashboard Title - moved to left approx 40px */
+    .dashboard-title {{
+        position: absolute;
+        top: 10px;
+        right: 40px;
+        color: #21137f;
+        font-size: 2rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        z-index: 101;
     }}
-    
-    .main .block-container {{
-        padding: 0 !important;
-        max-width: 100% !important;
-    }}
-    
+
+    /* Wrapper for Nav and PBI */
     .dashboard-container {{
-        width: {total_width}px;
-        height: {total_height}px;
+        width: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
-        padding-top: 20px;
-        background: transparent;
         position: relative;
-        overflow: hidden;
-        transform: scale(0.75); /* Default zoom to 75% */
-        transform-origin: top center; /* Scale from top center */
-        transition: transform 0.3s ease; /* Smooth transition for scaling */
     }}
-    
+
+    /* Navigation bar */
     .nav-tab-container {{
+        width: 100%;
+        height: {nav_height}px;
         position: relative;
-        width: {nav_width}px;
-        z-index: 1000;
-    }}
-    
-    .nav-edge-lighting {{
-        position: absolute;
-        top: -5px;
-        left: -5px;
-        width: calc(100% + 10px);
-        height: calc(100% + 10px);
+        z-index: 100;
+        border-bottom: 1px solid #e9ecef;
+        background-color: {nav_bg_color};
         border-radius: {nav_border_radius};
-        z-index: 0;
+        overflow: hidden;
+    }}
+    .nav-tab {{
+        width: 100%; height: 100%;
+        display: flex; align-items: center; justify-content: center;
+    }}
+
+    /* Power BI Section */
+    .power-bi-container {{
+        width: {pbi_width}px; height: {pbi_height}px;
+        position: relative;
+        z-index: 10;
+        background-color: #ffffff;
+        overflow: hidden;
+        border-radius: {pbi_border_radius};
+    }}
+
+    /* Effects Layer */
+    .pbi-effects-layer {{
+        position: absolute;
+        top: -5px; left: -5px;
+        width: calc(100% + 10px); height: calc(100% + 10px);
+        z-index: 1;
         pointer-events: none;
+        border-radius: 8px;
+        overflow: hidden;
     }}
-    
-    .nav-glow-effect {{
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: transparent;
-        border: 5px solid {nav_glow_color};
-        border-radius: {nav_border_radius};
-        box-shadow: 
-            0 0 35px 8px rgba(65, 137, 255, 0.5),
-            inset 0 0 18px rgba(65, 137, 255, 0.4);
-        animation: breathe 8s infinite ease-in-out;
+
+    /* Glow Effect */
+    .pbi-glow-effect {{
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        border: 3px solid {pbi_glow_color};
+        border-radius: inherit;
+        box-shadow:
+            0 0 18px 4px rgba(0, 123, 255, 0.25),
+            inset 0 0 10px rgba(0, 123, 255, 0.2);
+        animation: pbi-breathe 10s infinite ease-in-out;
+        opacity: 0.8;
     }}
-    
-    .nav-scatter-container {{
-        position: absolute;
-        top: -10px;
-        left: -10px;
-        width: calc(100% + 20px);
-        height: calc(100% + 10px);
-        pointer-events: none;
-        z-index: 0;
+    @keyframes pbi-breathe {{
+        0%   {{ opacity: 0.7; transform: scale(1); box-shadow: 0 0 18px 4px rgba(0, 123, 255, 0.25), inset 0 0 10px rgba(0, 123, 255, 0.2); }}
+        50%  {{ opacity: 1.0; transform: scale(1.003); box-shadow: 0 0 25px 6px rgba(0, 123, 255, 0.35), inset 0 0 14px rgba(0, 123, 255, 0.25); }}
+        100% {{ opacity: 0.7; transform: scale(1); box-shadow: 0 0 18px 4px rgba(0, 123, 255, 0.25), inset 0 0 10px rgba(0, 123, 255, 0.2); }}
     }}
-    
-    .nav-scatter-particle {{
+
+    /* Particle Effect along Boundaries */
+    .pbi-scatter-particle {{
         position: absolute;
-        width: {particle_size}px;
-        height: {particle_size}px;
+        width: {particle_size}px; height: {particle_size}px;
         border-radius: 50%;
         background-color: {particle_color};
         filter: blur({particle_blur});
-        animation: float 5s infinite ease-out;
+        animation: pbi-float 8s infinite ease-in-out alternate;
     }}
-    
-    .nav-scatter-particle:nth-child(1) {{ top: -10px; left: 10%; animation-delay: 0.1s; }}
-    .nav-scatter-particle:nth-child(2) {{ top: -8px; left: 30%; animation-delay: 0.5s; }}
-    .nav-scatter-particle:nth-child(3) {{ top: -12px; left: 50%; animation-delay: 0.9s; }}
-    .nav-scatter-particle:nth-child(4) {{ top: -9px; left: 70%; animation-delay: 1.3s; }}
-    .nav-scatter-particle:nth-child(5) {{ top: -11px; left: 90%; animation-delay: 1.7s; }}
-    
-    .nav-tab {{
-        width: 100%;
-        background-color: {nav_background_color};
-        padding: {nav_padding};
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-shadow: {nav_shadow};
-        backdrop-filter: blur({nav_blur});
-        -webkit-backdrop-filter: blur({nav_blur});
-        border-radius: {nav_border_radius};
-        height: {nav_height}px;
-        position: relative;
-        z-index: 1;
+    {particle_css}
+    @keyframes pbi-float {{
+        0%   {{ opacity: 0.2; transform: translate(0px, 0px) scale(0.8); }}
+        50%  {{ opacity: 0.8; transform: translate(4px, 4px) scale(1); }}
+        100% {{ opacity: 0.2; transform: translate(8px, 8px) scale(0.8); }}
     }}
-    
-    .nav-brand {{
-        display: flex;
-        align-items: center;
-        height: 100%;
-    }}
-    
-    .nav-logo {{
-        height: {logo_height}px;
-        margin-right: {logo_margin_right}px;
-        vertical-align: middle;
-        transition: transform 0.3s ease, filter 0.3s ease;
-    }}
-    
-    .nav-logo:hover {{
-        transform: scale(1.05);
-        filter: drop-shadow(0 0 5px rgba(65, 137, 255, 0.7));
-    }}
-    
-    .nav-title {{
-        font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-        font-size: {title_font_size}px;
-        font-weight: {title_font_weight};
-        color: {title_color};
-        letter-spacing: 0.3px;
-        text-shadow: {title_text_shadow};
-    }}
-    
-    .power-bi-container {{
-        width: {width}px;
-        height: {height}px;
-        position: relative;
-        margin-top: -5px;
-        overflow: visible; /* Allow glow to extend beyond container */
-        z-index: 10;
-    }}
-    
+
+    /* Loading Overlay */
     .loading-container {{
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        background-color: rgba(0, 32, 84, 0.9);
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        background-color: rgba(255, 255, 255, 0.95);
         z-index: 1001;
-        border-radius: 0 0 4px 4px;
-        transition: opacity 0.5s ease-out;
+        transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+        visibility: visible; opacity: 1;
     }}
-    
+    .loading-container.hidden {{ opacity: 0; visibility: hidden; }}
     .loading-spinner {{
-        width: 60px;
-        height: 60px;
-        margin-bottom: 20px;
-        border: 5px solid rgba(65, 137, 255, 0.3);
-        border-radius: 50%;
-        border-top-color: rgba(65, 137, 255, 0.9);
-        animation: spin 1s linear infinite;
+        width: 45px; height: 45px; margin-bottom: 18px;
+        border: 4px solid rgba(0, 123, 255, 0.2);
+        border-radius: 50%; border-top-color: #007bff;
+        animation: spin 1.2s linear infinite;
     }}
-    
-    .loading-text {{
-        color: white;
-        font-size: 16px;
-        text-align: center;
-        text-shadow: 0 0 10px rgba(65, 137, 255, 0.8);
-    }}
-    
-    @keyframes spin {{
-        0% {{ transform: rotate(0deg); }}
-        100% {{ transform: rotate(360deg); }}
-    }}
-    
+    .loading-text {{ color: #495057; font-size: 1rem; font-weight: 500; }}
+    @keyframes spin {{ 100% {{ transform: rotate(360deg); }} }}
+
+    /* Power BI Iframe */
     .power-bi-frame {{
         border: none;
-        border-radius: 0 0 4px 4px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-        width: {width}px;
-        height: {height}px;
+        width: 100%; height: 100%;
+        position: relative; z-index: 5;
         background: transparent;
-        position: relative;
-        z-index: 1; /* Above glow effect */
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }}
 
-    .power-bi-frame:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.1);
+    /* Error Message */
+    .error-message {{
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background-color: #dc3545; color: white;
+        padding: 15px 25px; border-radius: 5px; text-align: center;
+        width: calc(100% - 40px); max-width: 500px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        z-index: 1003;
+        display: none; font-size: 0.95rem;
     }}
 
-    /* Hide Power BI navigation and filter panes */
-    .power-bi-frame + div,
-    .power-bi-frame ~ div[class*="report-navigation"],
-    .power-bi-frame ~ div[class*="page-navigation"],
-    div[class*="filter-pane"],
-    div[class*="filters-container"],
-    div[role="complementary"],
-    div[aria-label*="Filters"] {{
-        display: none !important;
-    }}
-
-    .edge-lighting {{
-        position: absolute;
-        top: -5px;
-        left: -5px;
-        width: calc(100% + 10px);
-        height: calc(100% + 10px);
-        border-radius: 0 0 5px 5px;
-        z-index: 0;
-        pointer-events: none;
-    }}
-    
-    .glow-effect {{
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: transparent;
-        border: 5px solid rgba(65, 137, 255, 0.7);
-        border-radius: 0 0 5px 5px;
-        box-shadow: 
-            0 0 35px 8px rgba(65, 137, 255, 0.5),
-            inset 0 0 18px rgba(65, 137, 255, 0.4);
-        animation: breathe 8s infinite ease-in-out;
-        z-index: 0;
-    }}
-    
-    .scatter-container {{
-        position: absolute;
-        top: -10px;
-        left: -10px;
-        width: calc(100% + 20px);
-        height: calc(100% + 20px);
-        pointer-events: none;
-        z-index: 0;
-    }}
-    
-    .scatter-particle {{
-        position: absolute;
-        width: 4px;
-        height: 4px;
-        border-radius: 50%;
-        background-color: rgba(65, 137, 255, 0.6);
-        filter: blur(1px);
-        animation: float 5s infinite ease-out;
-    }}
-    
-    .scatter-particle:nth-child(1) {{ top: 10%; left: -10px; animation-delay: 0s; }}
-    .scatter-particle:nth-child(2) {{ top: 30%; left: -8px; animation-delay: 0.4s; }}
-    .scatter-particle:nth-child(3) {{ top: 50%; left: -12px; animation-delay: 0.8s; }}
-    .scatter-particle:nth-child(4) {{ top: 70%; left: -9px; animation-delay: 1.2s; }}
-    .scatter-particle:nth-child(5) {{ top: 90%; left: -11px; animation-delay: 1.6s; }}
-    .scatter-particle:nth-child(6) {{ bottom: -10px; left: 20%; animation-delay: 0.2s; }}
-    .scatter-particle:nth-child(7) {{ bottom: -12px; left: 40%; animation-delay: 0.6s; }}
-    .scatter-particle:nth-child(8) {{ bottom: -8px; left: 60%; animation-delay: 1s; }}
-    .scatter-particle:nth-child(9) {{ bottom: -10px; left: 80%; animation-delay: 1.4s; }}
-    .scatter-particle:nth-child(10) {{ top: 15%; right: -10px; animation-delay: 0.3s; }}
-    .scatter-particle:nth-child(11) {{ top: 35%; right: -8px; animation-delay: 0.7s; }}
-    .scatter-particle:nth-child(12) {{ top: 55%; right: -12px; animation-delay: 1.1s; }}
-    .scatter-particle:nth-child(13) {{ top: 75%; right: -9px; animation-delay: 1.5s; }}
-    .scatter-particle:nth-child(14) {{ top: -10px; left: 10%; animation-delay: 0.1s; }}
-    .scatter-particle:nth-child(15) {{ top: -8px; left: 30%; animation-delay: 0.5s; }}
-    .scatter-particle:nth-child(16) {{ top: -12px; left: 50%; animation-delay: 0.9s; }}
-    .scatter-particle:nth-child(17) {{ top: -9px; left: 70%; animation-delay: 1.3s; }}
-    .scatter-particle:nth-child(18) {{ top: -11px; left: 90%; animation-delay: 1.7s; }}
-
-    @keyframes float {{
-        0% {{ opacity: 0; transform: translate(0, 0) scale(0.8); }}
-        20% {{ opacity: 0.8; transform: translate(calc(var(--direction-x, -1) * 6px), calc(var(--direction-y, -1) * 6px)) scale(1.2); }}
-        100% {{ opacity: 0; transform: translate(calc(var(--direction-x, -1) * 12px), calc(var(--direction-y, -1) * 12px)) scale(0.8); }}
-    }}
-
-    @keyframes breathe {{
-        0% {{ opacity: 0.3; border-color: rgba(65, 137, 255, 0.4); box-shadow: 0 0 15px 3px rgba(65, 137, 255, 0.3), inset 0 0 8px rgba(65, 137, 255, 0.2); }}
-        50% {{ opacity: 1; border-color: rgba(65, 137, 255, 0.8); box-shadow: 0 0 40px 10px rgba(65, 137, 255, 0.6), inset 0 0 20px rgba(65, 137, 255, 0.5); }}
-        100% {{ opacity: 0.3; border-color: rgba(65, 137, 255, 0.4); box-shadow: 0 0 15px 3px rgba(65, 137, 255, 0.3), inset 0 0 8px rgba(65, 137, 255, 0.2); }}
-    }}
-
+    /* Control Panel */
     .control-panel {{
         position: fixed;
-        right: {control_panel_right}px;
-        bottom: {control_panel_bottom}px;
-        display: flex;
-        gap: 10px;
-        z-index: 1002;
-        opacity: 0.7;
-        transition: opacity 0.3s ease;
-        pointer-events: auto;
+        right: {control_panel_right}px; bottom: {control_panel_bottom}px;
+        display: flex; gap: 10px; z-index: 1002;
+        opacity: 0.75; transition: opacity 0.3s ease;
     }}
-
-    .control-panel:hover {{
-        opacity: 1;
-    }}
-
+    .control-panel:hover {{ opacity: 1; }}
     .control-button {{
-        background-color: rgba(0, 32, 84, 0.7);
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 5px 10px;
-        font-size: 12px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 5px;
+        background-color: rgba(255, 255, 255, 0.95); color: #0056b3;
+        border: 1px solid #dee2e6; border-radius: 5px; padding: 8px 14px;
+        font-size: 0.8rem; font-weight: 500; cursor: pointer;
+        transition: all 0.2s ease; display: flex; align-items: center;
+        gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); line-height: 1;
     }}
-
     .control-button:hover {{
-        background-color: rgba(65, 137, 255, 0.8);
+        background-color: #0056b3; color: white; border-color: #0056b3;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.1);
     }}
+    .control-button:hover .icon {{ border-color: white !important; }}
+    .control-button:hover .refresh-icon::after {{ border-top-color: white !important; }}
+    .control-button:hover .fullscreen-icon::before,
+    .control-button:hover .fullscreen-icon::after {{ border-color: white !important; }}
 
-    .fullscreen-icon {{
-        width: 12px;
-        height: 12px;
-        border: 1px solid white;
-        position: relative;
-    }}
+    /* Icons */
+    .icon {{ width: 14px; height: 14px; display: inline-block; vertical-align: middle; transition: border-color 0.2s ease; }}
+    .refresh-icon {{ border: 2px solid #0056b3; border-radius: 50%; border-right-color: transparent; position: relative; animation: spin 1.5s linear infinite; animation-play-state: paused; }}
+    .refresh-icon::after {{ content: ''; position: absolute; top: -3px; right: -1px; width: 0; height: 0; border-style: solid; border-width: 4px 4px 0 4px; border-color: #0056b3 transparent transparent transparent; transition: border-color 0.2s ease; }}
+    .refreshing .refresh-icon {{ animation-play-state: running; }}
+    .fullscreen-icon {{ border: 2px solid #0056b3; position: relative; }}
+    .fullscreen-icon::before, .fullscreen-icon::after {{ content: ''; position: absolute; width: 4px; height: 4px; border-color: #0056b3; border-style: solid; transition: border-color 0.2s ease; }}
+    .fullscreen-icon::before {{ top: -2px; left: -2px; border-width: 2px 0 0 2px; }}
+    .fullscreen-icon::after {{ bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }}
+    .fullscreen-icon.is-fullscreen::before {{ top: auto; bottom: -2px; left: -2px; border-width: 0 0 2px 2px; }}
+    .fullscreen-icon.is-fullscreen::after {{ top: -2px; bottom: auto; right: -2px; border-width: 2px 2px 0 0; }}
 
-    .refresh-icon {{
-        width: 12px;
-        height: 12px;
-        position: relative;
-        border: 1px solid transparent;
-    }}
-
-    .refresh-icon::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 8px;
-        height: 8px;
-        border: 1px solid white;
-        border-bottom-color: transparent;
-        border-left-color: transparent;
-        border-radius: 50%;
-    }}
-
-    .refresh-icon::after {{
-        content: '';
-        position: absolute;
-        top: 4px;
-        right: 0;
-        width: 0;
-        height: 0;
-        border-style: solid;
-        border-width: 3px 0 0 3px;
-        border-color: white transparent transparent white;
-        transform: rotate(45deg);
-    }}
-
-    @media (max-width: 1400px) {{
-        .dashboard-container {{ transform: scale(0.75); transform-origin: top center; }}
-    }}
-
-    @media (max-width: 1200px) {{
-        .dashboard-container {{ transform: scale(0.65); transform-origin: top center; }}
-    }}
-
-    @media (max-width: 992px) {{
-        .dashboard-container {{ transform: scale(0.55); transform-origin: top center; }}
-    }}
-
-    @media (max-width: 768px) {{
-        .dashboard-container {{ transform: scale(0.45); transform-origin: top center; }}
-    }}
-
-    .error-message {{
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(220, 53, 69, 0.9);
-        color: white;
-        padding: 20px;
-        border-radius: 8px;
-        text-align: center;
-        max-width: 80%;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        z-index: 1003;
-        display: none;
-    }}
-
-    .tooltip {{
-        position: relative;
-    }}
-
+    /* Tooltip */
+    .tooltip {{ position: relative; }}
     .tooltip .tooltip-text {{
-        visibility: hidden;
-        width: 120px;
-        background-color: rgba(0, 32, 84, 0.9);
-        color: white;
-        text-align: center;
-        border-radius: 4px;
-        padding: 5px;
-        position: absolute;
-        z-index: 1004;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        opacity: 0;
-        transition: opacity 0.3s;
-        font-size: 11px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        visibility: hidden; width: max-content; background-color: #343a40;
+        color: white; text-align: center; border-radius: 4px; padding: 6px 10px;
+        position: absolute; z-index: 1004; bottom: 140%; left: 50%;
+        transform: translateX(-50%); opacity: 0; transition: opacity 0.3s, visibility 0.3s;
+        font-size: 0.75rem; font-weight: 400; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        white-space: nowrap;
     }}
+    .tooltip .tooltip-text::after {{ content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #343a40 transparent transparent transparent; }}
+    .tooltip:hover .tooltip-text {{ visibility: visible; opacity: 1; }}
 
-    .tooltip .tooltip-text::after {{
-        content: "";
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        margin-left: -5px;
-        border-width: 5px;
-        border-style: solid;
-        border-color: rgba(0, 32, 84, 0.9) transparent transparent transparent;
-    }}
-
-    .tooltip:hover .tooltip-text {{
-        visibility: visible;
-        opacity: 1;
-    }}
 </style>
-
-<div class="dashboard-container" id="dashboardContainer">
-    <div class="nav-tab-container">
-        <div class="nav-edge-lighting">
-            <div class="nav-glow-effect"></div>
-            <div class="nav-scatter-container">
-                {' '.join(['<div class="nav-scatter-particle"></div>' for _ in range(particle_count_nav)])}
+</head>
+<body>
+    <!-- Dashboard Wrapper -->
+    <div class="dashboard-wrapper" id="dashboardWrapper">
+        <div class="dashboard-container" id="dashboardContainer">
+            <div class="nav-tab-container">
+                <div class="nav-tab">
+                    {nav_image_html}
+                </div>
+                <!-- Dashboard Title now positioned to the left -->
+                <div class="dashboard-title">Eatern Bearing Dashboard</div>
             </div>
-        </div>
-        <div class="nav-tab">
-            <div class="nav-brand">
-                <img src="https://arb-easternbearings.com/wp-content/uploads/2021/08/arb-bearings-logo-300x192-1.jpg" alt="ARB Logo" class="nav-logo">
-                <span class="nav-title">EASTERN BEARING DASHBOARD</span>
+            <div class="power-bi-container">
+                <div class="pbi-effects-layer">
+                    <div class="pbi-glow-effect"></div>
+                    {' '.join(['<div class="pbi-scatter-particle"></div>' for _ in range(particle_count_pbi)])}
+                </div>
+                <div class="loading-container" id="loadingOverlay">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading Dashboard...</div>
+                </div>
+                <div class="error-message" id="errorMessage">
+                    Failed to load dashboard. Please check connection or report setup and try refreshing.
+                </div>
+                <iframe
+                    class="power-bi-frame"
+                    id="powerBiFrame"
+                    title="ARB Eastern Bearing Analysis Power BI Report"
+                    aria-label="Embedded Power BI report for ARB Eastern Bearing Analysis"
+                    width="{pbi_width}"
+                    height="{pbi_height}"
+                    src="https://app.powerbi.com/reportEmbed?reportId=edc2c5e4-eec4-46c1-bc44-cc39a5d10c97&autoAuth=true&ctid=c393e2ef-9c24-4bfc-bf28-c48ac7208f2e&navContentPaneEnabled=false&filterPaneEnabled=false&pageName=ReportSection"
+                    frameborder="0"
+                    allowFullScreen="true"
+                    onload="iframeLoadSuccess()"
+                    onerror="iframeLoadError(event)">
+                </iframe>
             </div>
         </div>
     </div>
-
-    <div class="power-bi-container">
-        <div class="edge-lighting">
-            <div class="glow-effect"></div>
-            <div class="scatter-container">
-                <div class="scatter-particle" style="--direction-x: -1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: -1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: -1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: -1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: -1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: 1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: 1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: 1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: 1;"></div>
-                <div class="scatter-particle" style="--direction-x: 1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 1; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: -1;"></div>
-                <div class="scatter-particle" style="--direction-x: 0; --direction-y: -1;"></div>
-            </div>
-        </div>
-        
-        <div class="loading-container" id="loadingOverlay">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">Loading dashboard data...</div>
-        </div>
-        
-        <div class="error-message" id="errorMessage">
-            Failed to load the dashboard. Please check your connection and try again.
-        </div>
-        
-        <iframe 
-            class="power-bi-frame"
-            id="powerBiFrame"
-            title="5 Years Analysis" 
-            width="{width}" 
-            height="{height}" 
-            src="https://app.powerbi.com/reportEmbed?reportId=edc2c5e4-eec4-46c1-bc44-cc39a5d10c97&autoAuth=true&ctid=c393e2ef-9c24-4bfc-bf28-c48ac7208f2e&navContentPaneEnabled=false&filterPaneEnabled=false" 
-            frameborder="0" 
-            allowFullScreen="true"
-            onload="document.getElementById('loadingOverlay').style.opacity = 0; setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 500);"
-            onerror="document.getElementById('errorMessage').style.display = 'block'; document.getElementById('loadingOverlay').style.display = 'none';">
-        </iframe>
-    </div>
-
+    <!-- Controls -->
     <div class="control-panel">
-        <button class="control-button tooltip" onclick="refreshReport()">
-            <div class="refresh-icon"></div>
+        <button class="control-button tooltip" id="refreshButton" onclick="refreshReport()" aria-label="Refresh dashboard data">
+            <span class="icon refresh-icon"></span>
             <span>Refresh</span>
-            <span class="tooltip-text">Reload the latest data</span>
+            <span class="tooltip-text">Reload latest data</span>
         </button>
-        
-        <button class="control-button tooltip" onclick="toggleFullscreen()">
-            <div class="fullscreen-icon"></div>
-            <span>Fullscreen</span>
-            <span class="tooltip-text">View in fullscreen mode</span>
+        <button class="control-button tooltip" id="fullscreenButton" onclick="toggleFullscreen()" aria-label="Toggle fullscreen mode">
+            <span class="icon fullscreen-icon" id="fullscreenIcon"></span>
+            <span id="fullscreenText">Fullscreen</span>
+            <span class="tooltip-text">Toggle fullscreen</span>
         </button>
     </div>
-</div>
-
 <script>
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const errorMessage = document.getElementById('errorMessage');
+    const iframe = document.getElementById('powerBiFrame');
+    const dashboardWrapper = document.getElementById('dashboardWrapper');
+    const fullscreenButton = document.getElementById('fullscreenButton');
+    const fullscreenIcon = document.getElementById('fullscreenIcon');
+    const fullscreenText = document.getElementById('fullscreenText');
+    const refreshButton = document.getElementById('refreshButton');
+
+    function iframeLoadSuccess() {{
+        console.log("Iframe loaded successfully.");
+        loadingOverlay.classList.add('hidden');
+        errorMessage.style.display = 'none';
+        refreshButton.classList.remove('refreshing');
+    }}
+
+    function iframeLoadError(event) {{
+        console.error("Iframe failed to load. Event:", event);
+        errorMessage.textContent = 'Error loading dashboard. Please check the report link or your connection.';
+        errorMessage.style.display = 'block';
+        loadingOverlay.classList.add('hidden');
+        refreshButton.classList.remove('refreshing');
+    }}
+
+    iframe.onload = iframeLoadSuccess;
+    iframe.onerror = iframeLoadError;
+
     function refreshReport() {{
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        document.getElementById('loadingOverlay').style.opacity = 1;
-        const iframe = document.getElementById('powerBiFrame');
-        const src = iframe.src;
-        iframe.src = '';
-        setTimeout(() => {{ iframe.src = src; }}, 300);
+        console.log("Attempting to refresh iframe...");
+        loadingOverlay.classList.remove('hidden');
+        errorMessage.style.display = 'none';
+        refreshButton.classList.add('refreshing');
+        const currentSrc = iframe.src;
+        iframe.src = 'about:blank';
+        setTimeout(() => {{
+            console.log("Resetting iframe src to:", currentSrc);
+            iframe.onload = iframeLoadSuccess;
+            iframe.onerror = iframeLoadError;
+            iframe.src = currentSrc;
+        }}, 60);
     }}
-    
+
     function toggleFullscreen() {{
-        const dashboard = document.getElementById('dashboardContainer');
-        const iframe = document.getElementById('powerBiFrame');
-        
-        if (!document.fullscreenElement) {{
-            // Enter fullscreen
-            if (dashboard.requestFullscreen) {{ dashboard.requestFullscreen(); }}
-            else if (dashboard.mozRequestFullScreen) {{ dashboard.mozRequestFullScreen(); }}
-            else if (dashboard.webkitRequestFullscreen) {{ dashboard.webkitRequestFullscreen(); }}
-            else if (dashboard.msRequestFullscreen) {{ dashboard.msRequestFullscreen(); }}
-            
-            // Calculate scale to fit screen while maintaining aspect ratio
-            const screenWidth = window.screen.width;
-            const screenHeight = window.screen.height;
-            const dashboardWidth = {total_width};
-            const dashboardHeight = {total_height};
-            const scaleX = screenWidth / dashboardWidth;
-            const scaleY = screenHeight / dashboardHeight;
-            const scale = Math.min(scaleX, scaleY); // Fit within screen while preserving aspect ratio
-            
-            dashboard.style.transform = 'scale(' + scale + ')';
-            dashboard.style.transformOrigin = 'top center';
+        const elementToFullscreen = dashboardWrapper;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {{
+            console.log("Requesting fullscreen for wrapper element.");
+            if (elementToFullscreen.requestFullscreen) {{
+                elementToFullscreen.requestFullscreen().catch(err => {{
+                    console.error(`Error attempting to enable full-screen mode: ${{err.message}} (${{err.name}})`);
+                    alert(`Fullscreen request failed: ${{err.message}}`);
+                }});
+            }} else if (elementToFullscreen.webkitRequestFullscreen) {{
+                elementToFullscreen.webkitRequestFullscreen().catch(err => {{
+                    console.error(`Error attempting to enable full-screen mode: ${{err.message}} (${{err.name}})`);
+                    alert(`Fullscreen request failed: ${{err.message}}`);
+                }});
+            }} else if (elementToFullscreen.msRequestFullscreen) {{
+                elementToFullscreen.msRequestFullscreen();
+            }}
         }} else {{
-            // Exit fullscreen
-            if (document.exitFullscreen) {{ document.exitFullscreen(); }}
-            else if (document.mozCancelFullScreen) {{ document.mozCancelFullScreen(); }}
-            else if (document.webkitExitFullscreen) {{ document.webkitExitFullscreen(); }}
-            else if (document.msExitFullscreen) {{ document.msExitFullscreen(); }}
-            
-            // Revert to default 75% zoom
-            dashboard.style.transform = 'scale(0.75)';
-            dashboard.style.transformOrigin = 'top center';
+            console.log("Exiting fullscreen.");
+            if (document.exitFullscreen) {{
+                document.exitFullscreen().catch(err => {{
+                    console.error(`Error attempting to disable full-screen mode: ${{err.message}} (${{err.name}})`);
+                }});
+            }} else if (document.webkitExitFullscreen) {{
+                document.webkitExitFullscreen().catch(err => {{
+                    console.error(`Error attempting to disable full-screen mode: ${{err.message}} (${{err.name}})`);
+                }});
+            }} else if (document.msExitFullscreen) {{
+                document.msExitFullscreen();
+            }}
         }}
     }}
-    
-    // Ensure scale resets on fullscreen change
-    document.addEventListener('fullscreenchange', function() {{
-        const dashboard = document.getElementById('dashboardContainer');
-        if (!document.fullscreenElement) {{
-            dashboard.style.transform = 'scale(0.75)';
-            dashboard.style.transformOrigin = 'top center';
+
+    function handleFullscreenChange() {{
+        const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        console.log("Fullscreen state changed. Is fullscreen:", isFullscreen);
+        if (isFullscreen) {{
+            fullscreenIcon.classList.add('is-fullscreen');
+            fullscreenText.textContent = 'Exit Fullscreen';
+            document.body.classList.add('in-fullscreen-mode');
+        }} else {{
+            fullscreenIcon.classList.remove('is-fullscreen');
+            fullscreenText.textContent = 'Fullscreen';
+            document.body.classList.remove('in-fullscreen-mode');
         }}
-    }});
-    
-    window.addEventListener('error', function(e) {{
-        if (e.target.tagName === 'IFRAME') {{
-            document.getElementById('errorMessage').style.display = 'block';
-            document.getElementById('loadingOverlay').style.display = 'none';
+    }}
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    let initialLoadComplete = false;
+    function checkInitialLoad() {{
+        if (!initialLoadComplete && iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {{
+            initialLoadComplete = true;
+            console.log("Iframe detected as complete on initial check/readystatechange.");
+            iframeLoadSuccess();
+            iframe.removeEventListener('readystatechange', checkInitialLoad);
         }}
-    }}, true);
+    }}
+
+    if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {{
+         checkInitialLoad();
+    }} else {{
+         iframe.addEventListener('readystatechange', checkInitialLoad);
+         iframe.addEventListener('load', () => {{ checkInitialLoad(); }}, {{ once: true }});
+    }}
 </script>
+</body>
+</html>
 """
 
-# Display the report
-html(iframe_code, height=total_height, scrolling=False)
+display_height = content_height + 100
+st.components.v1.html(iframe_code, height=display_height, scrolling=True)

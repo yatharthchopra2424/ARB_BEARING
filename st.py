@@ -516,7 +516,7 @@ iframe_code = f"""
         <div class="nav-tab">
             <div class="nav-brand">
                 <img src="https://arb-easternbearings.com/wp-content/uploads/2021/08/arb-bearings-logo-300x192-1.jpg" alt="ARB Logo" class="nav-logo">
-                <span class="nav-title">ARB Bearing Dashboard</span>
+                <span class="nav-title">EASTERN BEARING DASHBOARD</span>
             </div>
         </div>
     </div>

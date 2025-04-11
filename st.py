@@ -80,7 +80,7 @@ pbi_glow_color = "rgba(0, 123, 255, 0.6)"  # Slightly stronger glow color
 
 # --- Control Panel Position ---
 control_panel_right = 120
-control_panel_bottom = 95
+control_panel_bottom = 85
 
 # --- Watermark Configuration ---
 watermark_text = "EASTERN BEARING"

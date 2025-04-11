@@ -378,7 +378,7 @@ iframe_code = f"""
                     {nav_image_html}
                 </div>
                 <!-- Dashboard Title now positioned to the left -->
-                <div class="dashboard-title">Eatern Bearing Dashboard</div>
+                <div class="dashboard-title">EASTERN BEARING DASHBOARD</div>
             </div>
             <div class="power-bi-container">
                 <div class="pbi-effects-layer">

@@ -22,6 +22,37 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
     menu_items=None
 )
+st.markdown("""
+    <style>
+        /* Hide header and footer */
+        header, footer, [data-testid="stToolbar"] {
+            display: none !important;
+        }
+
+        /* Remove padding and center content full screen */
+        .block-container {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .main {
+            padding: 0 !important;
+        }
+
+        /* Optional: make body 100% height and width */
+        html, body, .main {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Optional: remove scrollbars */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 
 # --- Image Encoding ---
 image_file_name = "input_file_0.png"  # Make sure this file is accessible
@@ -117,9 +148,10 @@ iframe_code = f"""
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     html {{ font-size: 16px; }}
     body {{
-        width: 100%;
-        min-height: 100vh;
-        padding: 30px 10px;
+        width: var(--outer-width);
+        min-height: var(--outer-height);
+        margin: 0 auto;
+        padding: 0;
         font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         background-color: #f0f2f5;
         position: relative;
@@ -147,11 +179,11 @@ iframe_code = f"""
 
     /* Wrapper for the fixed-width dashboard */
     .dashboard-wrapper {{
-        width: {content_width}px;
-        margin: 0 auto;
+        width: 100%;
+        margin: 0;
         position: relative;
         background-color: #ffffff;
-        border-radius: 6px;
+        border-radius: 0px;
         box-shadow: {pbi_shadow};
         overflow: hidden;
     }}
